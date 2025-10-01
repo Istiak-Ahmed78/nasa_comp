@@ -1,6 +1,75 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-class ISSInfoPanelScreen extends StatelessWidget {
+class ISSInfoPanelScreen extends StatefulWidget {
+  @override
+  _ISSInfoPanelScreenState createState() => _ISSInfoPanelScreenState();
+}
+
+class _ISSInfoPanelScreenState extends State<ISSInfoPanelScreen> {
+  Map<String, dynamic>? _issData;
+  Map<String, dynamic>? _astronautData;
+  bool _isLoading = true;
+  String _errorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchNASAData();
+  }
+
+  Future<void> _fetchNASAData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Fetch ISS current position
+      final issResponse = await http.get(
+        Uri.parse('https://api.wheretheiss.at/v1/satellites/25544'),
+      );
+
+      // Fetch current astronauts in space
+      final astronautResponse = await http.get(
+        Uri.parse('http://api.open-notify.org/astros.json'),
+      );
+
+      if (issResponse.statusCode == 200 &&
+          astronautResponse.statusCode == 200) {
+        setState(() {
+          _issData = json.decode(issResponse.body);
+          _astronautData = json.decode(astronautResponse.body);
+          _isLoading = false;
+        });
+      } else {
+        throw Exception('Failed to load NASA data');
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to load live data: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _getCurrentAstronautNames() {
+    if (_astronautData != null && _astronautData!['people'] != null) {
+      final people = _astronautData!['people'] as List;
+      final issAstronauts =
+          people.where((person) => person['craft'] == 'ISS').take(2).toList();
+      if (issAstronauts.isNotEmpty) {
+        return issAstronauts.map((a) => a['name']).join(', ');
+      }
+      return 'ISS Crew';
+    }
+    return 'NASA Astronauts';
+  }
+
+  int _getAstronautCount() {
+    return _astronautData?['number'] ?? 7;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -10,7 +79,7 @@ class ISSInfoPanelScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              // Header
+              // Header with Live Data Status
               Container(
                 width: double.infinity,
                 padding: EdgeInsets.all(16),
@@ -22,6 +91,44 @@ class ISSInfoPanelScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _isLoading
+                              ? Icons.refresh
+                              : _errorMessage.isNotEmpty
+                              ? Icons.error
+                              : Icons.rocket_launch,
+                          color:
+                              _isLoading
+                                  ? Colors.orange
+                                  : _errorMessage.isNotEmpty
+                                  ? Colors.red
+                                  : Colors.green,
+                          size: 20,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          _isLoading
+                              ? 'Loading NASA Data...'
+                              : _errorMessage.isNotEmpty
+                              ? 'Offline Mode'
+                              : 'LIVE NASA DATA',
+                          style: TextStyle(
+                            color:
+                                _isLoading
+                                    ? Colors.orange
+                                    : _errorMessage.isNotEmpty
+                                    ? Colors.red
+                                    : Colors.green,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
                     Text(
                       'NASA Mission Control: Classroom',
                       style: TextStyle(
@@ -31,14 +138,77 @@ class ISSInfoPanelScreen extends StatelessWidget {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 8),
+                    SizedBox(height: 4),
                     Text(
-                      'Training • Math Worksheet',
+                      'Training • Math Worksheet • Live ISS Tracking',
                       style: TextStyle(color: Colors.blue[100], fontSize: 14),
                     ),
                   ],
                 ),
               ),
+
+              // Current Mission Status Panel
+              if (!_isLoading && _errorMessage.isEmpty)
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.green[900],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.green[300]!),
+                  ),
+                  padding: EdgeInsets.all(14),
+                  margin: EdgeInsets.only(bottom: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.track_changes,
+                            color: Colors.greenAccent,
+                            size: 18,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Current Mission Status',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green[100],
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _buildLiveDataChip(
+                            '${_getAstronautCount()} People in Space',
+                            Colors.blue,
+                            Icons.people,
+                          ),
+                          _buildLiveDataChip(
+                            '${_issData?['velocity']?.toStringAsFixed(0) ?? '27,600'} km/h',
+                            Colors.orange,
+                            Icons.speed,
+                          ),
+                          _buildLiveDataChip(
+                            '${_issData?['altitude']?.toStringAsFixed(0) ?? '420'} km Altitude',
+                            Colors.purple,
+                            Icons.height,
+                          ),
+                          _buildLiveDataChip(
+                            '${_getCurrentAstronautNames()}',
+                            Colors.red,
+                            Icons.person,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
 
               // Teaching Moments Section
               Container(
@@ -126,28 +296,94 @@ class ISSInfoPanelScreen extends StatelessWidget {
 
               SizedBox(height: 16),
 
-              // Quick ISS Facts
+              // Quick ISS Facts with Live Data
               _buildFactsPanel(),
+
+              SizedBox(height: 16),
+
+              // Refresh Button if error
+              if (_errorMessage.isNotEmpty)
+                Container(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _fetchNASAData,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue[800],
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.refresh, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text(
+                          'Retry NASA Data Connection',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
               SizedBox(height: 16),
 
               // Footer
               Container(
                 padding: EdgeInsets.all(12),
-                child: Text(
-                  'NASA Educational Resources | Mission Control: Classroom\nAll materials aligned with NGSS Standards',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white54,
-                    height: 1.4,
-                  ),
-                  textAlign: TextAlign.center,
+                child: Column(
+                  children: [
+                    Text(
+                      'Live data from NASA-compatible APIs: Where the ISS At? & Open Notify',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.white54,
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'NASA Educational Resources | Mission Control: Classroom\nAll materials aligned with NGSS Standards',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white54,
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildLiveDataChip(String text, MaterialColor color, IconData icon) {
+    return Chip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.white),
+          SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+      backgroundColor: color[800],
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: VisualDensity.compact,
     );
   }
 
@@ -209,7 +445,17 @@ class ISSInfoPanelScreen extends StatelessWidget {
               LinkButton(
                 text: "Real-time ISS Tracker",
                 color: Colors.green[300]!,
-                onTap: () {},
+                onTap: () {
+                  // Could open actual NASA tracker
+                },
+              ),
+              SizedBox(height: 6),
+              LinkButton(
+                text: "Live ISS Position Map",
+                color: Colors.purple[300]!,
+                onTap: () {
+                  // Could show current position from _issData
+                },
               ),
             ],
           ),
@@ -247,17 +493,20 @@ class ISSInfoPanelScreen extends StatelessWidget {
             children: [
               ActivityStep(
                 label: "Before the Pass:",
-                detail: "Calculate the ISS speed and altitude",
+                detail:
+                    "Calculate ISS speed: ${_issData?['velocity']?.toStringAsFixed(0) ?? '27,600'} km/h",
               ),
               SizedBox(height: 8),
               ActivityStep(
                 label: "During the Pass:",
-                detail: "Time the crossing with stopwatches",
+                detail:
+                    "Time the crossing - altitude: ${_issData?['altitude']?.toStringAsFixed(0) ?? '420'} km",
               ),
               SizedBox(height: 8),
               ActivityStep(
                 label: "After the Pass:",
-                detail: "Research what experiments are happening onboard",
+                detail:
+                    "Research experiments with ${_getAstronautCount()} astronauts onboard",
               ),
             ],
           ),
@@ -327,8 +576,12 @@ class ISSInfoPanelScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildFactItem('Speed: 27,600 km/h (17,150 mph)'),
-        _buildFactItem('Altitude: ~420 km above Earth'),
+        _buildFactItem(
+          'Speed: ${_issData?['velocity']?.toStringAsFixed(0) ?? '27,600'} km/h',
+        ),
+        _buildFactItem(
+          'Altitude: ${_issData?['altitude']?.toStringAsFixed(0) ?? '420'} km above Earth',
+        ),
         _buildFactItem('Orbit time: 90 minutes'),
         _buildFactItem('Daily orbits: 15.5 times per day'),
       ],
@@ -341,7 +594,7 @@ class ISSInfoPanelScreen extends StatelessWidget {
       children: [
         _buildFactItem('Size: Football field sized'),
         _buildFactItem('Mass: 450,000 kg'),
-        _buildFactItem('Crew: Usually 6-7 people'),
+        _buildFactItem('Crew: ${_getAstronautCount()} people in space'),
         _buildFactItem('Countries: 15 nations involved'),
       ],
     );

@@ -8,6 +8,8 @@ import 'dart:convert';
 import 'dart:async';
 
 class CupolaExperience extends StatefulWidget {
+  const CupolaExperience({super.key});
+
   @override
   State<CupolaExperience> createState() => _CupolaExperienceState();
 }
@@ -15,6 +17,7 @@ class CupolaExperience extends StatefulWidget {
 class _CupolaExperienceState extends State<CupolaExperience> {
   late YoutubePlayerController _ytController;
   Timer? _issDataTimer;
+  bool _shouldUpdateISSData = true;
 
   // Real-time ISS data
   double _latitude = 0.0;
@@ -49,17 +52,26 @@ class _CupolaExperienceState extends State<CupolaExperience> {
   }
 
   void _startISSTracking() {
+    _shouldUpdateISSData = true;
+
     // Fetch immediately
     _fetchISSData();
 
     // Update every 10 seconds
     _issDataTimer = Timer.periodic(Duration(seconds: 10), (timer) {
-      _fetchISSData();
+      if (_shouldUpdateISSData && mounted) {
+        _fetchISSData();
+      } else {
+        timer.cancel();
+      }
     });
   }
 
   Future<void> _fetchISSData() async {
     try {
+      print("Starting fetch ISS data...");
+
+      if (!mounted) return;
       setState(() {
         _isLoading = true;
       });
@@ -69,9 +81,15 @@ class _CupolaExperienceState extends State<CupolaExperience> {
           .get(Uri.parse('https://api.wheretheiss.at/v1/satellites/25544'))
           .timeout(Duration(seconds: 10));
 
+      print(
+        "HTTP request completed with status: ${positionResponse.statusCode}",
+      );
+
       if (positionResponse.statusCode == 200) {
         final positionData = json.decode(positionResponse.body);
+        print("Response JSON decoded: $positionData");
 
+        if (!mounted) return;
         setState(() {
           _latitude = positionData['latitude']?.toDouble() ?? 0.0;
           _longitude = positionData['longitude']?.toDouble() ?? 0.0;
@@ -79,14 +97,22 @@ class _CupolaExperienceState extends State<CupolaExperience> {
           _velocity = positionData['velocity']?.toDouble() ?? 27600.0;
           _errorMessage = "";
         });
+        print("State updated with ISS positional data.");
 
         // Get location name based on coordinates
+        print("Fetching location name based on coordinates...");
         await _fetchLocationName(_latitude, _longitude);
+        print("Location name fetched successfully.");
       } else {
+        print(
+          "Failed to fetch ISS data. Status Code: ${positionResponse.statusCode}",
+        );
         throw Exception('Failed to fetch ISS data');
       }
     } catch (e) {
-      setState(() {
+      print("Exception caught during ISS data fetch: $e");
+      if (!mounted) return;
+      _safeSetState(() {
         _errorMessage = "Live data unavailable. Showing demo data.";
         _currentLocation = "Pacific Ocean";
         _currentCountry = "International Waters";
@@ -97,46 +123,137 @@ class _CupolaExperienceState extends State<CupolaExperience> {
 
   Future<void> _fetchLocationName(double lat, double lng) async {
     try {
-      // Use OpenStreetMap Nominatim for reverse geocoding
+      print("Starting reverse geocoding for lat: $lat, lng: $lng");
+
+      // Use BigDataCloud API for reverse geocoding
       final response = await http
           .get(
             Uri.parse(
-              'https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng&zoom=3',
+              'https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=$lat&longitude=$lng&localityLanguage=en',
             ),
           )
           .timeout(Duration(seconds: 5));
 
+      print(
+        "HTTP request to BigDataCloud completed with status: ${response.statusCode}",
+      );
+
       if (response.statusCode == 200) {
         final locationData = json.decode(response.body);
-        final address = locationData['address'];
+        print("Response JSON decoded: $locationData");
 
-        setState(() {
-          _currentCountry = address['country'] ?? 'International Waters';
+        if (!mounted) return;
+        _safeSetState(() {
+          // Extract country name
+          _currentCountry =
+              locationData['countryName']?.toString() ??
+              _extractCountryFromLocalityInfo(locationData) ??
+              'International Waters';
 
-          // Try to get more specific location
-          if (address['ocean'] != null) {
-            _currentLocation = "${address['ocean']} Ocean";
-          } else if (address['sea'] != null) {
-            _currentLocation = "${address['sea']} Sea";
-          } else if (address['country'] != null) {
-            _currentLocation = address['country'];
-          } else if (address['continent'] != null) {
-            _currentLocation = address['continent'];
-          } else {
-            _currentLocation = _getOceanFromCoordinates(lat, lng);
-          }
+          print("Country found: $_currentCountry");
 
+          // Extract location name with priority order
+          _currentLocation =
+              locationData['city']?.toString() ??
+              locationData['locality']?.toString() ??
+              locationData['principalSubdivision']?.toString() ??
+              _extractLocationFromLocalityInfo(locationData) ??
+              _getOceanFromCoordinates(lat, lng);
+
+          print("Location found: $_currentLocation");
           _isLoading = false;
+          print("Location state updated");
         });
+      } else {
+        throw Exception(
+          'BigDataCloud API returned status: ${response.statusCode}',
+        );
       }
     } catch (e) {
-      // Fallback to coordinate-based location detection
-      setState(() {
+      print("Exception caught during reverse geocoding: $e");
+      if (!mounted) return;
+      _safeSetState(() {
         _currentLocation = _getOceanFromCoordinates(lat, lng);
         _currentCountry = _getRegionFromCoordinates(lat, lng);
         _isLoading = false;
+        print("Fallback location set, loading false");
       });
     }
+  }
+
+  // Helper method to extract country from localityInfo
+  String? _extractCountryFromLocalityInfo(Map<String, dynamic> locationData) {
+    try {
+      final localityInfo = locationData['localityInfo'];
+      if (localityInfo != null) {
+        final administrative = localityInfo['administrative'];
+        final informative = localityInfo['informative'];
+
+        if (administrative is List) {
+          for (var admin in administrative) {
+            if (admin is Map) {
+              final name = admin['name']?.toString();
+              final adminLevel = admin['adminLevel'];
+              if (name != null && adminLevel == 2) {
+                return name;
+              }
+            }
+          }
+        }
+
+        if (informative is List) {
+          for (var info in informative) {
+            if (info is Map) {
+              final name = info['name']?.toString();
+              final description = info['description']?.toString();
+              if (name != null && description?.contains('country') == true) {
+                return name;
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print("Error extracting country from localityInfo: $e");
+    }
+    return null;
+  }
+
+  // Helper method to extract location from localityInfo
+  String? _extractLocationFromLocalityInfo(Map<String, dynamic> locationData) {
+    try {
+      final localityInfo = locationData['localityInfo'];
+      if (localityInfo != null) {
+        final administrative = localityInfo['administrative'];
+        final informative = localityInfo['informative'];
+
+        if (administrative is List && administrative.isNotEmpty) {
+          for (var admin in administrative) {
+            if (admin is Map) {
+              final name = admin['name']?.toString();
+              final description = admin['description']?.toString();
+              if (name != null && description != 'maritime') {
+                return name;
+              }
+            }
+          }
+        }
+
+        if (informative is List && informative.isNotEmpty) {
+          for (var info in informative) {
+            if (info is Map) {
+              final name = info['name']?.toString();
+              if (name != null) {
+                return name;
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print("Error extracting location from localityInfo: $e");
+    }
+    return null;
   }
 
   String _getOceanFromCoordinates(double lat, double lng) {
@@ -144,6 +261,7 @@ class _CupolaExperienceState extends State<CupolaExperience> {
     if (lat > 0 && lng > -80 && lng < 40) return "Atlantic Ocean";
     if (lat < 0 && lng > 20 && lng < 150) return "Indian Ocean";
     if (lat > 60) return "Arctic Ocean";
+    if (lat < -45) return "Southern Ocean";
     return "Ocean";
   }
 
@@ -162,8 +280,16 @@ class _CupolaExperienceState extends State<CupolaExperience> {
     return '${lat.abs().toStringAsFixed(2)}°$latDir, ${lng.abs().toStringAsFixed(2)}°$lngDir';
   }
 
+  // Safe state update helper
+  void _safeSetState(VoidCallback callback) {
+    if (mounted) {
+      setState(callback);
+    }
+  }
+
   @override
   void dispose() {
+    _shouldUpdateISSData = false;
     _issDataTimer?.cancel();
     _ytController.close();
     super.dispose();

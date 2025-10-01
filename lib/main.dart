@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:nasa2/app/docking/destinyLab.dart';
 import 'package:nasa2/app/docking/docking.dart';
 import 'package:nasa2/app/docking/issi_view.dart';
@@ -20,7 +22,7 @@ class ZeroGExplorerApp extends StatelessWidget {
     return MaterialApp(
       title: 'Zero-G Explorer',
       theme: ThemeData.dark(),
-      home: MissionControlClassroomScreen(),
+      home: StartScreen(),
       debugShowCheckedModeBanner: false,
     );
   }
@@ -80,7 +82,7 @@ class StartScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => ISSDirectScreen()),
+                      MaterialPageRoute(builder: (_) => CupolaExperience()),
                     );
                   },
                   style: OutlinedButton.styleFrom(
@@ -106,23 +108,62 @@ class _NBLTrainingScreenState extends State<NBLTrainingScreen> {
   int step = 1;
   final int totalSteps = 7;
 
-  // For suit assembly simulation
-  List<String> equippedParts = [];
+  String? nasaImageUrl;
+  bool isLoadingImage = true;
+  final String apiQuery = "Neutral Buoyancy Lab";
 
-  // For weight adjustment challenge
-  Map<String, int> weights = {
-    'Left Weight': 45,
-    'Right Weight': 50,
-    'Chest Weight': 50,
-    'Back Weight': 50,
-  };
-  final int targetTotalWeight = 200;
+  @override
+  void initState() {
+    super.initState();
+    fetchNasaImage();
+  }
+
+  Future<void> fetchNasaImage() async {
+    final Uri url = Uri.https('images-api.nasa.gov', '/search', {
+      'q': apiQuery,
+      'media_type': 'image',
+      'page': '1',
+    });
+
+    try {
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final items = data['collection']?['items'];
+        if (items != null && items.isNotEmpty) {
+          final firstItem = items[0];
+          final links = firstItem['links'];
+          if (links != null && links.isNotEmpty) {
+            setState(() {
+              nasaImageUrl = links[0]['href'];
+              isLoadingImage = false;
+            });
+          }
+        } else {
+          setState(() {
+            isLoadingImage = false;
+          });
+          print("No images found for query");
+        }
+      } else {
+        setState(() {
+          isLoadingImage = false;
+        });
+        print("NASA API error: HTTP ${response.statusCode}");
+      }
+    } catch (e) {
+      setState(() {
+        isLoadingImage = false;
+      });
+      print("Error fetching NASA image: $e");
+    }
+  }
 
   void nextStep() {
     if (step < totalSteps) {
       setState(() => step++);
     } else {
-      // After last step (4), navigate to launch sequence
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => LaunchSequenceScreen()),
@@ -158,19 +199,33 @@ class _NBLTrainingScreenState extends State<NBLTrainingScreen> {
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 14),
-              Container(
-                height: 180,
-                width: double.infinity,
-                clipBehavior: Clip.hardEdge,
-                decoration: BoxDecoration(
+              if (isLoadingImage)
+                CircularProgressIndicator(color: Colors.cyanAccent)
+              else if (nasaImageUrl != null)
+                ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  color: Colors.blueGrey.shade900,
+                  child: Image.network(
+                    nasaImageUrl!,
+                    height: 180,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                )
+              else
+                Container(
+                  height: 180,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.blueGrey.shade900,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'No image available',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  ),
                 ),
-                child: Image.asset(
-                  'assets/Step-Taining.jpg', // Place your image at assets/images/
-                  fit: BoxFit.cover,
-                ),
-              ),
               SizedBox(height: 16),
               Text(
                 "NASA Neutral Buoyancy Lab",
@@ -254,6 +309,8 @@ class _NBLTrainingScreenState extends State<NBLTrainingScreen> {
     );
   }
 
+  // Include your other step widgets here (SuitAssemblyStep2, PreBreatheStep, etc...)
+
   Widget stepContent() {
     switch (step) {
       case 1:
@@ -266,7 +323,6 @@ class _NBLTrainingScreenState extends State<NBLTrainingScreen> {
         return SuitAssemblyStep2(nextStep: nextStep);
       case 3:
         return PreBreatheStep(onComplete: nextStep);
-
       case 4:
         return CableConnectionWidget(onComplete: nextStep);
       case 5:
@@ -330,18 +386,20 @@ class LaunchSequenceScreen extends StatelessWidget {
   }
 }
 
-class ISSDirectScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Direct to ISS')),
-      body: Center(
-        child: Text(
-          'Welcome directly aboard the International Space Station!',
-          style: TextStyle(fontSize: 20),
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
-  }
-}
+// class ISSDirectScreen extends StatelessWidget {
+//   const ISSDirectScreen({super.key});
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(title: Text('Direct to ISS')),
+//       body: Center(
+//         child: Text(
+//           'Welcome directly aboard the International Space Station!',
+//           style: TextStyle(fontSize: 20),
+//           textAlign: TextAlign.center,
+//         ),
+//       ),
+//     );
+//   }
+// }
