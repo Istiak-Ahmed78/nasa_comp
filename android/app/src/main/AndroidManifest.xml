@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permisssion.INTERNET"/>
+
     <application
-        android:label="nasa2"
+        android:label="Zero-G Explorer"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
