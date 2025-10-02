@@ -168,7 +168,4 @@ This project is developed for the NASA Space Apps Challenge 2025. All NASA asset
 
 *⭐ Star this repo if you find our project inspiring!*
 
-*Connect with us:* [Team Contact Information]  
-*Challenge Page:* [NASA Space Apps 2025 ISS 25th Anniversary]  
-
 Inspiring the next generation of explorers, one simulation at a time. 🚀✨
