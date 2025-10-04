@@ -95,8 +95,7 @@ flutter run
 
 ## 🎥 Demo & Media
 
-- *Live Demo*: [Web Application Link]
-- *Our 240s project video link : [Find here](https://youtu.be/IpjCltvvJEY)
+- *Our 240s project video link* : [Find here](https://youtu.be/IpjCltvvJEY)
 - *Mobile App*: Available via QR code scanning or [Find here](https://github.com/Istiak-Ahmed78/nasa_comp/releases/download/v-1.0.1/app-armeabi-v7a-release.apk)
 
 
