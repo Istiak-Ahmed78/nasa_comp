@@ -104,14 +104,25 @@ flutter run
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/ea691649-4529-4c3b-b6fd-25e578159257" alt="App Screenshot 1" width="200"/>
-  <img src="https://github.com/user-attachments/assets/ca43995f-3368-446f-b17a-8a95feac22e3" alt="App Screenshot 2" width="200"/>
+  <img src="https://github.com/user-attachments/assets/bd7801b5-eba7-4d7b-bdfe-b10599fb762e" alt="App Screenshot 1" width="200"/>
+    <img src="https://github.com/user-attachments/assets/d10fa3bb-d05f-459b-b3d1-d0064b10c98d" alt="App Screenshot 6" width="200"/>
   <img src="https://github.com/user-attachments/assets/323b5f3c-adba-456d-a6be-cefdc4eac8bf" alt="App Screenshot 3" width="200"/>
-</p>
-
-<p align="center">
+  <img src="https://github.com/user-attachments/assets/ca43995f-3368-446f-b17a-8a95feac22e3" alt="App Screenshot 2" width="200"/>
   <img src="https://github.com/user-attachments/assets/b5651c6f-1bd6-4083-b859-351ae1d87b40" alt="App Screenshot 4" width="200"/>
-  <img src="https://github.com/user-attachments/assets/1a87a0ee-d58c-483f-8605-45a70bf43074" alt="App Screenshot 5" width="200"/>
-  <img src="https://github.com/user-attachments/assets/d10fa3bb-d05f-459b-b3d1-d0064b10c98d" alt="App Screenshot 6" width="200"/>
+</p>
+<p align="center">
+    <img src="https://github.com/user-attachments/assets/1a87a0ee-d58c-483f-8605-45a70bf43074" alt="App Screenshot 5" width="200"/>
+  <img width="200" alt="image" src="https://github.com/user-attachments/assets/00ff32d5-524b-420e-a372-ef52ea3562b3" />
+  <img width="200" alt="image" src="https://github.com/user-attachments/assets/e28b7607-d897-46e7-89b0-49eb50a9564e" />
+  </p>
+<p align="center">
+
+  <img width="200" alt="image" src="https://github.com/user-attachments/assets/35300122-2ea8-4c38-b481-8cc0737816f1" />
+  <img width="200" alt="image" src="https://github.com/user-attachments/assets/0606ba4f-ff4c-4572-9848-136c7a53bea3" />
+  <img width="200" alt="image" src="https://github.com/user-attachments/assets/14e49767-2f3e-4052-8a3c-41a3bb4b1c68" />
+
+
+
 </p>
 
 
