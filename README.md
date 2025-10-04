@@ -96,9 +96,9 @@ flutter run
 ## 🎥 Demo & Media
 
 - *Live Demo*: [Web Application Link]
-- *Project Video*: [YouTube Presentation]
-- *Mobile App*: Available via QR code scanning or [Find here]([https://example.com](https://github.com/Istiak-Ahmed78/nasa_comp/releases/download/v-1.0.1/app-armeabi-v7a-release.apk))
-- *Classroom Testimonials*: [Included in video presentation]
+- *Our 240s project video link : [Find here](https://youtu.be/IpjCltvvJEY)
+- *Mobile App*: Available via QR code scanning or [Find here](https://github.com/Istiak-Ahmed78/nasa_comp/releases/download/v-1.0.1/app-armeabi-v7a-release.apk)
+
 
 ## App screenshots
 
